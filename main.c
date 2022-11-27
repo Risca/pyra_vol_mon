@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <linux/iio/events.h>
 #include <linux/iio/types.h>
@@ -44,14 +46,16 @@ static int execute_callback(const struct pyra_volume_config *config, int value)
 	snprintf(min_string, sizeof(min_string), "%d", config->min);
 	snprintf(max_string, sizeof(max_string), "%d", config->max);
 
-	if (0 == (my_pid = fork())) {
-		if (-1 == execvp(config->executable, argv)) {
-			perror("child process execve failed");
-			return -1;
-		}
+	my_pid = fork();
+	if (my_pid > 0)
+		return 0;
+	if (my_pid < 0) {
+		perror("fork failed");
+		return -1;
 	}
-
-	return 0;
+	execvp(config->executable, argv)
+	perror("child process execve failed");
+	exit(1);
 }
 
 int main(int argc, char **argv)
@@ -99,8 +103,10 @@ int main(int argc, char **argv)
 			continue;
 
 		value = read_value_and_update_thresholds(&config, iio_event_handle);
-		if (value >= 0)
+		if (value >= 0) {
+			waitpid(-1, NULL, WNOHANG);
 			execute_callback(&config, value);
+		}
 	}
 
 	if (close(event_fd) == -1)
