@@ -30,7 +30,7 @@ static bool event_is_ours(struct iio_event_data *event, int channel)
 
 static int execute_callback(const struct pyra_volume_config *config, int value)
 {
-	pid_t my_pid;
+	pid_t child;
 	char value_string[32];
 	char min_string[32];
 	char max_string[32];
@@ -46,14 +46,16 @@ static int execute_callback(const struct pyra_volume_config *config, int value)
 	snprintf(min_string, sizeof(min_string), "%d", config->min);
 	snprintf(max_string, sizeof(max_string), "%d", config->max);
 
-	my_pid = fork();
-	if (my_pid > 0)
+	child = fork();
+	if (child > 0) {
+		waitpid(child, NULL, 0);
 		return 0;
-	if (my_pid < 0) {
+	}
+	if (child < 0) {
 		perror("fork failed");
 		return -1;
 	}
-	execvp(config->executable, argv)
+	execvp(config->executable, argv);
 	perror("child process execve failed");
 	exit(1);
 }
@@ -103,10 +105,8 @@ int main(int argc, char **argv)
 			continue;
 
 		value = read_value_and_update_thresholds(&config, iio_event_handle);
-		if (value >= 0) {
-			waitpid(-1, NULL, WNOHANG);
+		if (value >= 0)
 			execute_callback(&config, value);
-		}
 	}
 
 	if (close(event_fd) == -1)
