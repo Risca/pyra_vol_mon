@@ -25,9 +25,12 @@ $(OBJDIR) $(DEPDIR): ; @mkdir -p $@
 
 include tests/rules.mk
 
-.PHONY: clean
+.PHONY: clean tags
 clean:
 	rm -rf $(TARGET) $(OBJDIR) $(DEPDIR)
+
+tags:
+	ctags $(SRCS)
 
 $(DEPFILES):
 
