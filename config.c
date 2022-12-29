@@ -11,9 +11,9 @@
 #include <unistd.h>
 
 #define DEFAULT_CHANNEL	2
-#define DEFAULT_MIN	0
+#define DEFAULT_MIN	10
 #define DEFAULT_MAX	0x7FF
-#define DEFAULT_STEP	25
+#define DEFAULT_STEP	10
 #define DEFAULT_TIMEOUT 200
 
 #define XSTR(s)	STR(s)
