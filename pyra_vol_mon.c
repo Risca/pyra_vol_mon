@@ -57,7 +57,8 @@ int read_value_and_update_thresholds(
 			fprintf(stderr, "Failed to enable lower threshold %d: %d\n", low, ret);
 	}
 
-	fprintf(stderr, "value %d low threshold %d high threshold %d min %d max %d\n", value, low, high, config->min, config->max);
+	if (config->verbose)
+		printf("value %d low threshold %d high threshold %d min %d max %d\n", value, low, high, config->min, config->max);
 
 	return value;
 }

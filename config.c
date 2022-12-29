@@ -41,7 +41,9 @@ static const char* usage_string =
 	"                    Defaults to " XSTR(DEFAULT_CHANNEL) ".\n"
 	"  -l, --min         Lower limit to monitor. ADC values below this limit will\n"
 	"                    only trigger executable once, until the ADC channel goes\n"
-	"                    above the limit again.\n"
+	"                    above the limit again. This level also takes into account\n"
+	"                    the step value (see below), so the real lower threshold\n"
+	"                    is increased by --step\n"
 	"                    Defaults to " XSTR(DEFAULT_MIN) ".\n"
 	"  -u, --max         Upper limit to monitor. ADC values above this limit will\n"
 	"                    only trigger executable once, until the ADC cannel goes\n"
@@ -98,7 +100,6 @@ static void print_usage(const char* argv0)
 int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 {
 	const char* argv0 = argv[0];
-	bool verbose = false;
 
 	if (argc <= 1) {
 		goto err_no_executable;
@@ -109,6 +110,7 @@ int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 	cfg->max = DEFAULT_MAX;
 	cfg->step = DEFAULT_STEP;
 	cfg->timeout = DEFAULT_TIMEOUT;
+	cfg->verbose = false;
 	cfg->executable = NULL;
 
 	while (1) {
@@ -154,7 +156,7 @@ int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 			print_usage(argv0);
 			exit(0);
 		case 'v':
-			verbose = true;
+			cfg->verbose = true;
 			break;
 		case '?':
 		default:
@@ -169,13 +171,14 @@ int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 
 	cfg->executable = argv[optind];
 
-	if (verbose) {
+	if (cfg->verbose) {
 		printf("Options:\n");
 		printf("  channel:     %d\n", cfg->channel);
-		printf("  lower limit: %d\n", cfg->min);
+		printf("  lower limit: %d (real: %d)\n", cfg->min, cfg->min+cfg->step);
 		printf("  upper limit: %d\n", cfg->max);
 		printf("  step:        %d\n", cfg->step);
 		printf("  timeout:     %d\n", cfg->timeout);
+		puts  ("  verbose:     true (duh!)");
 		printf("  executable:  \"%s\"\n", cfg->executable);
 	}
 
