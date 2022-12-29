@@ -65,6 +65,7 @@ int main(int argc, char **argv)
 	struct iio_event_data event;
 	int ret;
 	int event_fd;
+	int last_value;
 	struct pyra_volume_config config;
 	struct pyra_iio_event_handle *iio_event_handle;
 
@@ -80,6 +81,7 @@ int main(int argc, char **argv)
 	if (ret >= 0)
 		execute_callback(&config, ret);
 
+	last_value = ret;
 	while (true) {
 		int value;
 
@@ -105,8 +107,10 @@ int main(int argc, char **argv)
 			continue;
 
 		value = read_value_and_update_thresholds(&config, iio_event_handle);
-		if (value >= 0)
+		if (value >= 0 && value != last_value) {
+			last_value = value;
 			execute_callback(&config, value);
+		}
 	}
 
 	if (close(event_fd) == -1)
