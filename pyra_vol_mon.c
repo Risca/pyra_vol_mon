@@ -9,7 +9,8 @@ int read_value_and_update_thresholds(
 {
 	int ret;
 	int value;
-	int threshold;
+	int low = -1;
+	int high = -1;
 
 	ret = pyra_iio_get_value(iio);
 	if (ret < 0) {
@@ -25,39 +26,37 @@ int read_value_and_update_thresholds(
 	else if (value < config->min)
 		value = config->min;
 
-	fprintf(stderr, "value %d threshold %d min %d max %d\n", value, threshold, config->min, config->max);
-
 	/* update upper threshold */
 	if (value == config->max) {
 		ret = pyra_iio_disable_upper_threshold(iio);
 		if (ret < 0)
-			fprintf(stderr, "Failed to disable upper threshold %d: %d\n", threshold, ret);
+			fprintf(stderr, "Failed to disable upper threshold %d: %d\n", value, ret);
 	} else {
+		high = value + config->step;
+		if (high > (int)config->max)
+			high = config->max - 1;	// set to last step
 
-		threshold = value + config->step;
-		if (threshold > (int)config->max)
-			threshold = config->max - 1;	// set to last step
-
-		ret = pyra_iio_enable_upper_threshold(iio, threshold);
+		ret = pyra_iio_enable_upper_threshold(iio, high);
 		if (ret < 0)
-			fprintf(stderr, "Failed to enable upper threshold %d: %d\n", threshold, ret);
+			fprintf(stderr, "Failed to enable upper threshold %d: %d\n", high, ret);
 	}
 
 	/* update lower threshold */
 	if (value == config->min) {
 		ret = pyra_iio_disable_lower_threshold(iio);
 		if (ret < 0)
-			fprintf(stderr, "Failed to disable lower threshold %d: %d\n", threshold, ret);
+			fprintf(stderr, "Failed to disable lower threshold %d: %d\n", value, ret);
 	} else {
+		low = value - config->step;
+		if (low < (int)config->min)
+			low = config->min + 1;	// set to last step
 
-		threshold = value - config->step;
-		if (threshold < (int)config->min)
-			threshold = config->min + 1;	// set to last step
-
-		ret = pyra_iio_enable_lower_threshold(iio, threshold);
+		ret = pyra_iio_enable_lower_threshold(iio, low);
 		if (ret < 0)
-			fprintf(stderr, "Failed to enable lower threshold %d: %d\n", threshold, ret);
+			fprintf(stderr, "Failed to enable lower threshold %d: %d\n", low, ret);
 	}
+
+	fprintf(stderr, "value %d low threshold %d high threshold %d min %d max %d\n", value, low, high, config->min, config->max);
 
 	return value;
 }
