@@ -23,6 +23,7 @@ define CREATE_TEST_INTERNAL
 	@./$$<
 
   TEST_TARGETS += test_run_$(1)
+  TEST_BINARIES += test_$(1)
 endef
 
 define CREATE_TEST
@@ -36,4 +37,4 @@ test: $(TEST_TARGETS)
 
 clean: clean_test
 clean_test:
-	rm -rf $(TEST_TARGETS) $(TEST_OBJDIR) $(TEST_DEPDIR)
+	rm -rf $(TEST_BINARIES) $(TEST_OBJDIR) $(TEST_DEPDIR)
