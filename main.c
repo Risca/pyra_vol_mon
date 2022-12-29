@@ -1,8 +1,10 @@
 #include <errno.h>
 #include <poll.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/timerfd.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <linux/iio/events.h>
@@ -11,6 +13,7 @@
 #include "pyra_vol_mon.h"
 
 #define ARR_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
+#define TIMEOUT_MS (200)
 
 static bool event_is_ours(struct iio_event_data *event, int channel)
 {
@@ -93,14 +96,57 @@ static int read_event(int event_fd, int channel)
 	return ret;
 }
 
+static int read_timer(int fd)
+{
+	ssize_t s;
+	uint64_t exp;
+
+	do {
+		s = read(fd, &exp, sizeof(uint64_t));
+		if (s == sizeof(uint64_t))
+			return 0; // all is as expected
+		else if (s < 0) {
+			if (errno == EINTR)
+				continue;
+			return errno;
+		}
+		else { // s is [0, sizeof(uint64_t)[
+			fprintf(stderr, "Short read of timer fd\n");
+			return -1;
+		}
+	} while (false);
+
+	return 0;
+}
+
+static int reset_timer(int fd)
+{
+	static const struct itimerspec ts = {
+		.it_interval = { 0, 0 },
+		.it_value = {
+			.tv_sec = 0,
+			.tv_nsec = TIMEOUT_MS * 1000 * 1000,
+		},
+	};
+
+	return timerfd_settime(fd, 0, &ts, NULL);
+}
+
+static int stop_timer(int fd)
+{
+	static const struct itimerspec ts = { 0 };
+	return timerfd_settime(fd, 0, &ts, NULL);
+}
+
 int main(int argc, char **argv)
 {
 	int ret;
 	int event_fd;
+	int timer_fd;
 	int last_value;
 	struct pyra_volume_config config;
 	struct pyra_iio_event_handle *iio_event_handle;
-	struct pollfd pfds[1];
+	struct pollfd pfds[2];
 
 	ret = pyra_get_config(&config, argc, argv);
 	if (ret < 0)
@@ -111,6 +157,15 @@ int main(int argc, char **argv)
 		return event_fd;
 	pfds[0].fd = event_fd;
 	pfds[0].events = POLLIN;
+
+	timer_fd = timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC);
+	if (timer_fd < 0) {
+		perror("timerfd_create");
+		close(event_fd);
+		return timer_fd;
+	}
+	pfds[1].fd = timer_fd;
+	pfds[1].events = POLLIN;
 
 	ret = read_value_and_update_thresholds(&config, iio_event_handle);
 	if (ret >= 0)
@@ -143,6 +198,12 @@ int main(int argc, char **argv)
 					goto out;
 				read_and_update = ret;
 			}
+			else if (pfds[i].fd == timer_fd) {
+				ret = read_timer(timer_fd);
+				if (ret < 0) // abort on errors
+					goto out;
+				read_and_update = true;
+			}
 			else {
 				fprintf(stderr, "POLLIN on unknown fd: %d\n", pfds[i].fd);
 				continue;
@@ -154,11 +215,20 @@ int main(int argc, char **argv)
 			if (value >= 0 && value != last_value) {
 				last_value = value;
 				execute_callback(&config, value);
+				if (value > config.min && value < config.max)
+					ret = reset_timer(timer_fd);
+				else
+					ret = stop_timer(timer_fd);
+				if (ret < 0) // abort on errors
+					goto out;
+
 			}
 		}
 	}
 
 out:
+	if (close(timer_fd) == -1)
+		perror("Failed to close timer fd");
 	if (close(event_fd) == -1)
 		perror("Failed to close event file");
 
