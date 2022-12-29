@@ -14,16 +14,18 @@
 #define DEFAULT_MIN	0
 #define DEFAULT_MAX	0x7FF
 #define DEFAULT_STEP	25
+#define DEFAULT_TIMEOUT 200
 
 #define XSTR(s)	STR(s)
 #define STR(s)	#s
 
-static const char* options = "c:l:u:s:hv";
+static const char* options = "c:l:u:s:t:hv";
 static const struct option long_options[] = {
 	{ "channel",	required_argument,	0,	'c' },
 	{ "min",	required_argument,	0,	'l' },
 	{ "max",	required_argument,	0,	'u' },
 	{ "step",	required_argument,	0,	's' },
+	{ "timeout",	required_argument,	0,	't' },
 	{ "help",	no_argument,		0,	'h' },
 	{ "verbose",	no_argument,		0,	'v' },
 	{ 0,		0,			0,	0 },
@@ -48,6 +50,9 @@ static const char* usage_string =
 	"  -s, --step        How much the ADC input value is allowed to change before\n"
 	"                    calling the executable again.\n"
 	"                    Defaults to " XSTR(DEFAULT_STEP) ".\n"
+	"  -t, --timeout     Check ADC value again after timeout ms. Stop timer if\n"
+	"                    the value is unchanged.\n"
+	"                    Defaults to " XSTR(DEFAULT_TIMEOUT) ".\n"
 	"  -h, --help        Show this help text and exit\n"
 	"  -v, --verbose     Be a bit more verbose.\n"
 	"\n"
@@ -102,6 +107,7 @@ int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 	cfg->min = DEFAULT_MIN;
 	cfg->max = DEFAULT_MAX;
 	cfg->step = DEFAULT_STEP;
+	cfg->timeout = DEFAULT_TIMEOUT;
 	cfg->executable = NULL;
 
 	while (1) {
@@ -137,6 +143,12 @@ int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 				return value;
 			cfg->step = value;
 			break;
+		case 't':
+			value = parse_number(optarg);
+			if (value < 0)
+				return value;
+			cfg->timeout = value;
+			break;
 		case 'h':
 			print_usage(argv0);
 			exit(0);
@@ -162,6 +174,7 @@ int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 		printf("  lower limit: %d\n", cfg->min);
 		printf("  upper limit: %d\n", cfg->max);
 		printf("  step:        %d\n", cfg->step);
+		printf("  timeout:     %d\n", cfg->timeout);
 		printf("  executable:  \"%s\"\n", cfg->executable);
 	}
 

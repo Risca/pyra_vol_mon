@@ -5,6 +5,7 @@ struct pyra_volume_config {
 	unsigned int	min;
 	unsigned int	max;
 	unsigned int	step;
+	unsigned int    timeout;
 	const char*	executable;
 };
 

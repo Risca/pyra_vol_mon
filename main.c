@@ -12,9 +12,6 @@
 
 #include "pyra_vol_mon.h"
 
-#define ARR_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
-#define TIMEOUT_MS (200)
-
 static bool event_is_ours(struct iio_event_data *event, int channel)
 {
 	int chan = IIO_EVENT_CODE_EXTRACT_CHAN(event->id);
@@ -119,13 +116,13 @@ static int read_timer(int fd)
 	return 0;
 }
 
-static int reset_timer(int fd)
+static int reset_timer(int fd, long ms)
 {
-	static const struct itimerspec ts = {
+	const struct itimerspec ts = {
 		.it_interval = { 0, 0 },
 		.it_value = {
-			.tv_sec = 0,
-			.tv_nsec = TIMEOUT_MS * 1000 * 1000,
+			.tv_sec = ms / 1000,
+			.tv_nsec = (ms % 1000) * 1000 * 1000,
 		},
 	};
 
@@ -142,7 +139,8 @@ int main(int argc, char **argv)
 {
 	int ret;
 	int event_fd;
-	int timer_fd;
+	int timer_fd = -1;
+	int num_fds = 1;
 	int last_value;
 	struct pyra_volume_config config;
 	struct pyra_iio_event_handle *iio_event_handle;
@@ -158,14 +156,17 @@ int main(int argc, char **argv)
 	pfds[0].fd = event_fd;
 	pfds[0].events = POLLIN;
 
-	timer_fd = timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC);
-	if (timer_fd < 0) {
-		perror("timerfd_create");
-		close(event_fd);
-		return timer_fd;
+	if (config.timeout) {
+		timer_fd = timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC);
+		if (timer_fd < 0) {
+			perror("timerfd_create");
+			close(event_fd);
+			return timer_fd;
+		}
+		pfds[1].fd = timer_fd;
+		pfds[1].events = POLLIN;
+		num_fds++;
 	}
-	pfds[1].fd = timer_fd;
-	pfds[1].events = POLLIN;
 
 	ret = read_value_and_update_thresholds(&config, iio_event_handle);
 	if (ret >= 0)
@@ -176,13 +177,13 @@ int main(int argc, char **argv)
 		bool read_and_update = false;
 		int ready;
 
-		ready = poll(pfds, ARR_SIZE(pfds), -1);
+		ready = poll(pfds, num_fds, -1);
 		if (ready == -1) {
 			perror("poll");
 			continue;
 		}
 
-		for (int i = 0; i < ARR_SIZE(pfds); ++i) {
+		for (int i = 0; i < num_fds; ++i) {
 			if (!pfds[i].revents)
 				continue;
 
@@ -215,13 +216,14 @@ int main(int argc, char **argv)
 			if (value >= 0 && value != last_value) {
 				last_value = value;
 				execute_callback(&config, value);
-				if (value > config.min && value < config.max)
-					ret = reset_timer(timer_fd);
-				else
-					ret = stop_timer(timer_fd);
-				if (ret < 0) // abort on errors
-					goto out;
-
+				if (config.timeout) {
+					if (value > config.min && value < config.max)
+						ret = reset_timer(timer_fd, config.timeout);
+					else
+						ret = stop_timer(timer_fd);
+					if (ret < 0) // abort on errors
+						goto out;
+				}
 			}
 		}
 	}
