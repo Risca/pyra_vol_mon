@@ -41,16 +41,17 @@ int read_value_and_update_thresholds(
 			fprintf(stderr, "Failed to enable upper threshold %d: %d\n", high, ret);
 	}
 
-	/* update lower threshold */
-	if (value == config->min) {
+	/* update lower threshold. It's really hard to trigger on low thresholds. As
+	 * a workaround, clamp value to zero if the resulting threshold value would
+	 * be below the min value.
+	 */
+	low = value - config->step;
+	if (low < (int)config->min) {
+		value = 0;
 		ret = pyra_iio_disable_lower_threshold(iio);
 		if (ret < 0)
 			fprintf(stderr, "Failed to disable lower threshold %d: %d\n", value, ret);
 	} else {
-		low = value - config->step;
-		if (low < (int)config->min)
-			low = config->min + 1;	// set to last step
-
 		ret = pyra_iio_enable_lower_threshold(iio, low);
 		if (ret < 0)
 			fprintf(stderr, "Failed to enable lower threshold %d: %d\n", low, ret);
