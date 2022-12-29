@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,8 @@
 #include <linux/iio/types.h>
 
 #include "pyra_vol_mon.h"
+
+#define ARR_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 
 static bool event_is_ours(struct iio_event_data *event, int channel)
 {
@@ -60,14 +63,44 @@ static int execute_callback(const struct pyra_volume_config *config, int value)
 	exit(1);
 }
 
-int main(int argc, char **argv)
+static int read_event(int event_fd, int channel)
 {
 	struct iio_event_data event;
+	int ret;
+
+	do {
+		ret = read(event_fd, &event, sizeof(event));
+		if (ret == -1) {
+			if (errno == EINTR)
+				continue;
+			else if (errno == EAGAIN) {
+				ret = 0;
+				fprintf(stderr, "nothing available\n");
+			} else {
+				ret = -errno;
+				perror("Failed to read event from device");
+			}
+		}
+		else if (ret != sizeof(event)) {
+			fprintf(stderr, "Reading event failed!\n");
+			ret = -EIO;
+		}
+		else {
+			ret = event_is_ours(&event, channel);
+		}
+	} while (false);
+
+	return ret;
+}
+
+int main(int argc, char **argv)
+{
 	int ret;
 	int event_fd;
 	int last_value;
 	struct pyra_volume_config config;
 	struct pyra_iio_event_handle *iio_event_handle;
+	struct pollfd pfds[1];
 
 	ret = pyra_get_config(&config, argc, argv);
 	if (ret < 0)
@@ -76,6 +109,8 @@ int main(int argc, char **argv)
 	event_fd = pyra_iio_event_open(&iio_event_handle, config.channel);
 	if (event_fd < 0)
 		return event_fd;
+	pfds[0].fd = event_fd;
+	pfds[0].events = POLLIN;
 
 	ret = read_value_and_update_thresholds(&config, iio_event_handle);
 	if (ret >= 0)
@@ -83,36 +118,47 @@ int main(int argc, char **argv)
 
 	last_value = ret;
 	while (true) {
-		int value;
+		bool read_and_update = false;
+		int ready;
 
-		ret = read(event_fd, &event, sizeof(event));
-		if (ret == -1) {
-			if (errno == EAGAIN) {
-				fprintf(stderr, "nothing available\n");
+		ready = poll(pfds, ARR_SIZE(pfds), -1);
+		if (ready == -1) {
+			perror("poll");
+			continue;
+		}
+
+		for (int i = 0; i < ARR_SIZE(pfds); ++i) {
+			if (!pfds[i].revents)
 				continue;
-			} else {
-				ret = -errno;
-				perror("Failed to read event from device");
-				break;
+
+			if (!(pfds[i].revents & POLLIN)) {
+				fprintf(stderr, "unexpected revent for fd %d: %d\n",
+						pfds[i].fd, pfds[i].revents);
+				continue;
+			}
+
+			if (pfds[i].fd == event_fd) {
+				ret = read_event(event_fd, config.channel);
+				if (ret < 0) // abort on errors
+					goto out;
+				read_and_update = ret;
+			}
+			else {
+				fprintf(stderr, "POLLIN on unknown fd: %d\n", pfds[i].fd);
+				continue;
 			}
 		}
 
-		if (ret != sizeof(event)) {
-			fprintf(stderr, "Reading event failed!\n");
-			ret = -EIO;
-			break;
-		}
-
-		if (!event_is_ours(&event, config.channel))
-			continue;
-
-		value = read_value_and_update_thresholds(&config, iio_event_handle);
-		if (value >= 0 && value != last_value) {
-			last_value = value;
-			execute_callback(&config, value);
+		if (read_and_update) {
+			int value = read_value_and_update_thresholds(&config, iio_event_handle);
+			if (value >= 0 && value != last_value) {
+				last_value = value;
+				execute_callback(&config, value);
+			}
 		}
 	}
 
+out:
 	if (close(event_fd) == -1)
 		perror("Failed to close event file");
 
