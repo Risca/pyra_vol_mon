@@ -24,7 +24,6 @@ $(OBJDIR)/%.o: %.c $(DEPDIR)/%.d Makefile | $(OBJDIR) $(DEPDIR)
 $(OBJDIR) $(DEPDIR): ; @mkdir -p $@
 
 include tests/rules.mk
-$(TARGET): $(TEST_BINARIES)
 
 .PHONY: clean tags
 clean:
