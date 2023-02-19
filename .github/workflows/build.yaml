@@ -2,7 +2,7 @@ name: build
 run-name: Build
 on: [push]
 env:
-  VERSION: '1.0'
+  VERSION: '1.0.1'
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -72,13 +72,14 @@ jobs:
     needs: [build-native, build-armhf, build-deb]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
       - name: Fetch build artifacts
+        id: download
         uses: actions/download-artifact@v3
+      - name: Display structure of downloaded files
+          run: ls -R
       - name: Upload to release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            pyra_vol_mon*
-            pyra-vol-mon*deb
+            ${{ steps.download.outputs.download-path }}/*/pyra_vol_mon*
+            ${{ steps.download.outputs.download-path }}/*/pyra-vol-mon*deb
