@@ -35,7 +35,7 @@ jobs:
           name: pyra_vol_mon-armhf
           path: pyra_vol_mon
   build-dep:
-    name: Package deb (armhf)
+    name: Package deb (armhf-generic)
     needs: build-armhf
     runs-on: ubuntu-latest
     steps:
@@ -43,5 +43,18 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pyra_vol_mon-armhf
+      - name: Prepare package dir
+        run: |
+          mkdir -p .debpkg/usr/bin
+          mv pyra_vol_mon .debpkg/usr/bin/
+          chmod +x .debpkg/usr/bin/pyra_vol_mon
       - name: Create debian package
-        run: echo "Packaging success!"
+        uses: jiro4989/build-deb-action@v2
+        with:
+          package: pyra_vol_mon
+          package_root: .debpkg
+          maintainer: Patrik Dahlström <risca@dalakolonin.se>
+          version: ${{ github.ref }} # refs/tags/v*.*.*
+          arch: 'armhf'
+          depends: 'libc6 (>= 2.2.1)'
+          desc: 'This is the Pyra volume monitor.'
