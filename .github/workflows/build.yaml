@@ -79,8 +79,6 @@ jobs:
       - name: Fetch all build artifacts
         id: download
         uses: actions/download-artifact@v3
-      - name: Display structure of downloaded files
-        run: ls -R
       - name: Upload to release
         uses: softprops/action-gh-release@v1
         with:
