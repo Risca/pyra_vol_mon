@@ -56,7 +56,12 @@ jobs:
           package: pyra-vol-mon
           package_root: .debpkg
           maintainer: Patrik Dahlström <risca@dalakolonin.se>
-          version: ${{ env.VERSION }}-${{ github.sha }}
+          version: ${{ env.VERSION }}
           arch: 'armhf'
           depends: 'libc6 (>= 2.2.1)'
           desc: 'This is the Pyra volume monitor.'
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: pyra-vol-mon_${{ env.VERSION }}_armhf.deb
+          path: pyra-vol-mon*.deb
