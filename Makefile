@@ -1,6 +1,7 @@
 CROSS_COMPILE ?=
 TARGET_CC := $(CROSS_COMPILE)gcc
 TARGET_LD := $(CROSS_COMPILE)gcc
+TARGET_STRIP := $(CROSS_COMPILE)strip
 
 OBJDIR := .objs
 DEPDIR := .deps
@@ -23,9 +24,12 @@ $(OBJDIR)/%.o: %.c $(DEPDIR)/%.d Makefile | $(OBJDIR) $(DEPDIR)
 
 $(OBJDIR) $(DEPDIR): ; @mkdir -p $@
 
+strip: $(TARGET)
+	$(TARGET_STRIP) --strip-all $<
+
 include tests/rules.mk
 
-.PHONY: clean tags
+.PHONY: clean tags strip
 clean:
 	rm -rf $(TARGET) $(OBJDIR) $(DEPDIR)
 
