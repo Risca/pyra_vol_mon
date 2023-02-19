@@ -9,12 +9,19 @@ jobs:
       - name: Running tests
         run: make -j$(nproc) test
   build-native:
+    name: Build (native)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Building native
         run: make -j$(nproc)
+      - name: Upload native build
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: pyra_vol_mon-native
+          path: pyra_vol_mon
   build-arm:
+    name: Build (armhf)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -22,8 +29,19 @@ jobs:
         run: sudo apt-get install -y gcc-arm-linux-gnueabihf
       - name: Building with gcc-arm-linux-gnueabihf
         run: make -j$(nproc) CROSS_COMPILE=arm-linux-gnueabihf-
-      - name: Upload a Build Artifact
+      - name: Upload arm build
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: pyra_vol_mon
+          name: pyra_vol_mon-armhf
           path: pyra_vol_mon
+  build-dep:
+    name: Package deb (armhf)
+    needs: build-arm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download arm binary
+        uses: actions/download-artifact@v3
+        with:
+          name: pyra_vol_mon-armhf
+      - name: Create debian package
+        run: echo "Packaging success!"
