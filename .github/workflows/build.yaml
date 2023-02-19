@@ -6,9 +6,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: make -j$(nproc) test
+      - name: Running tests
+        run: make -j$(nproc) test
   build-native:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: make -j$(nproc)
+      - name: Building native
+        run: make -j$(nproc)
+  build-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install gcc-arm-linux-gnueabihf
+        run: sudo apt-get install -y gcc-arm-linux-gnueabihf
+      - name: Building with gcc-arm-linux-gnueabihf
+        run: make -j$(nproc) CROSS_COMPILE=arm-linux-gnueabihf-
