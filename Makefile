@@ -16,7 +16,7 @@ OBJS := $(addprefix $(OBJDIR)/,$(SRCS:.c=.o))
 DEPFILES := $(SRCS:%.c=$(DEPDIR)/%.d)
 
 $(TARGET): $(OBJS)
-	$(LD) $(LDFLAGS) $^ -o $@
+	$(LD) $(LDFLAGS) $(OBJS) -o $@
 
 $(OBJDIR)/%.o: %.c $(DEPDIR)/%.d Makefile | $(OBJDIR) $(DEPDIR)
 	$(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
@@ -24,6 +24,7 @@ $(OBJDIR)/%.o: %.c $(DEPDIR)/%.d Makefile | $(OBJDIR) $(DEPDIR)
 $(OBJDIR) $(DEPDIR): ; @mkdir -p $@
 
 include tests/rules.mk
+$(TARGET): $(TEST_BINARIES)
 
 .PHONY: clean tags
 clean:

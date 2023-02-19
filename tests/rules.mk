@@ -17,12 +17,8 @@ define CREATE_TEST_INTERNAL
 
   $$(TEST_TARGET_$(1)): $$(TEST_OBJS_$(1))
 	$(LD) $(LDFLAGS) $$^ -o $$@
+	@./$$@
 
-  .PHONY: test_run_$(1)
-  test_run_$(1): $$(TEST_TARGET_$(1))
-	@./$$<
-
-  TEST_TARGETS += test_run_$(1)
   TEST_BINARIES += test_$(1)
 endef
 
@@ -32,8 +28,9 @@ endef
 
 $(call CREATE_TEST,threshold_handling,test_threshold_handling.c pyra_vol_mon.c iio_event.c)
 
-.PHONY: test $(TEST_TARGETS) clean_test
-test: $(TEST_TARGETS)
+.PHONY: test clean_test
+test: $(TEST_BINARIES)
+	@$(foreach __test_binary,$<,./$(__test_binary);)
 
 clean: clean_test
 clean_test:
