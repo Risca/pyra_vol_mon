@@ -56,7 +56,7 @@ jobs:
           package: pyra_vol_mon
           package_root: .debpkg
           maintainer: Patrik Dahlström <risca@dalakolonin.se>
-          version: $VERSION-${{ github.sha }}
+          version: ${{ env.VERSION }}-${{ github.sha }}
           arch: 'armhf'
           depends: 'libc6 (>= 2.2.1)'
           desc: 'This is the Pyra volume monitor.'
