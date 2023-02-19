@@ -20,7 +20,7 @@ jobs:
         with:
           name: pyra_vol_mon-native
           path: pyra_vol_mon
-  build-arm:
+  build-armhf:
     name: Build (armhf)
     runs-on: ubuntu-latest
     steps:
@@ -29,17 +29,17 @@ jobs:
         run: sudo apt-get install -y gcc-arm-linux-gnueabihf
       - name: Building with gcc-arm-linux-gnueabihf
         run: make -j$(nproc) CROSS_COMPILE=arm-linux-gnueabihf-
-      - name: Upload arm build
+      - name: Upload armhf build
         uses: actions/upload-artifact@v3.1.2
         with:
           name: pyra_vol_mon-armhf
           path: pyra_vol_mon
   build-dep:
     name: Package deb (armhf)
-    needs: build-arm
+    needs: build-armhf
     runs-on: ubuntu-latest
     steps:
-      - name: Download arm binary
+      - name: Download armhf binary
         uses: actions/download-artifact@v3
         with:
           name: pyra_vol_mon-armhf
