@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Building native
         run: |
-          make -j$(nproc)
+          make -j$(nproc) strip
           mv pyra_vol_mon pyra_vol_mon-native
       - name: Upload native build
         uses: actions/upload-artifact@v3.1.2
@@ -33,7 +33,7 @@ jobs:
         run: sudo apt-get install -y gcc-arm-linux-gnueabihf
       - name: Building with gcc-arm-linux-gnueabihf
         run: |
-          make -j$(nproc) CROSS_COMPILE=arm-linux-gnueabihf-
+          make -j$(nproc) CROSS_COMPILE=arm-linux-gnueabihf- strip
           mv pyra_vol_mon pyra_vol_mon-armhf
       - name: Upload armhf build
         uses: actions/upload-artifact@v3.1.2
