@@ -1,6 +1,6 @@
 CROSS_COMPILE ?=
-CC := $(CROSS_COMPILE)gcc
-LD := $(CROSS_COMPILE)gcc
+TARGET_CC := $(CROSS_COMPILE)gcc
+TARGET_LD := $(CROSS_COMPILE)gcc
 
 OBJDIR := .objs
 DEPDIR := .deps
@@ -16,10 +16,10 @@ OBJS := $(addprefix $(OBJDIR)/,$(SRCS:.c=.o))
 DEPFILES := $(SRCS:%.c=$(DEPDIR)/%.d)
 
 $(TARGET): $(OBJS)
-	$(LD) $(LDFLAGS) $(OBJS) -o $@
+	$(TARGET_LD) $(LDFLAGS) $(OBJS) -o $@
 
 $(OBJDIR)/%.o: %.c $(DEPDIR)/%.d Makefile | $(OBJDIR) $(DEPDIR)
-	$(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+	$(TARGET_CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 $(OBJDIR) $(DEPDIR): ; @mkdir -p $@
 
