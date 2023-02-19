@@ -2,6 +2,11 @@ name: build
 run-name: Build
 on: [push]
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: make -j$(nproc) test
   build-native:
     runs-on: ubuntu-latest
     steps:
