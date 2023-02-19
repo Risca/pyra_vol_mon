@@ -51,6 +51,7 @@ jobs:
           mv pyra_vol_mon .debpkg/usr/bin/
           chmod +x .debpkg/usr/bin/pyra_vol_mon
       - name: Create debian package
+        id: armhf-deb
         uses: jiro4989/build-deb-action@v2
         with:
           package: pyra-vol-mon
@@ -63,5 +64,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: pyra-vol-mon_${{ env.VERSION }}_armhf.deb
-          path: pyra-vol-mon*.deb
+          name: ${{ steps.armhf-deb.outputs.file_name }}
+          path: ${{ steps.armhf-deb.outputs.file_name }}
