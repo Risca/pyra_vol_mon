@@ -94,12 +94,6 @@ static int enable_threshold(const char* dev_dir_name,
 {
 	int ret;
 
-	/* it's currently necessary to disable threshold before updating it. Future
-	* updates to the palmas_gpadc module might fix this. */
-	ret = write_sysfs_int_and_verify(enable, dev_dir_name, 0);
-	if (ret < 0)
-		return ret;
-
 	ret = write_sysfs_int_and_verify(threshold, dev_dir_name, value);
 	if (ret < 0)
 		return ret;
